@@ -200,6 +200,7 @@ def main():
         required_one_of = [['name', 'update_cache', 'upgrade']],
         supports_check_mode = True)
 
+    xbps_path=dict()
     xbps_path['install'] = module.get_bin_path('xbps-install', True)
     xbps_path['query'] = module.get_bin_path('xbps-query', True)
     xbps_path['remove'] = module.get_bin_path('xbps-remove', True)
