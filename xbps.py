@@ -71,11 +71,7 @@ import sys
 
 def is_installed(xbps_output):
     """Take xbps output and find if installed"""
-    lines = xbps_output.split('\n')
-    for line in lines:
-        if 'State' in line:
-            return True if line.split(':')[1].strip() == "installed" else False
-    return None
+    return  bool(len(xbps_output))
 
 def query_package(module, xbps_path, name, state="present"):
     """Query XBPS for Package info"""
@@ -86,7 +82,7 @@ def query_package(module, xbps_path, name, state="present"):
             # package is not installed locally
             return False, False
 
-        rcmd = "%s -Sun" % (xbps_path['install'], name)
+        rcmd = "%s -Sun" % (xbps_path['install'])
         rrc, rstdout, rstderr = module.run_command(rcmd, check_rc=False)
 
         if rrc == 0:
@@ -128,7 +124,7 @@ def remove_packages(module, xbps_path, packages):
     # Using a for loop incase of error, we can report the package that failed
     for package in packages:
         # Query the package first, to see if we even need to remove
-        installed, updated = query_package(module, xbps_path['query'], package)
+        installed, updated = query_package(module, xbps_path, package)
         if not installed:
             continue
 
@@ -152,11 +148,11 @@ def install_packages(module, xbps_path, state, packages):
 
     for i, package in enumerate(packages):
         # if the package is installed and state == present or state == latest and is up-to-date then skip
-        installed, updated = query_package(module, xbps_path['query'], package)
+        installed, updated = query_package(module, xbps_path, package)
         if installed and (state == 'present' or (state == 'latest' and updated)):
             continue
 
-        cmd = "%s %s" % (xbps_path['install'], package)
+        cmd = "%s -y %s" % (xbps_path['install'], package)
         rc, stdout, stderr = module.run_command(cmd, check_rc=False)
 
         if rc != 0:
