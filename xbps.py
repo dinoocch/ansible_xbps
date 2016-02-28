@@ -37,7 +37,7 @@ options:
             - Whether or not to refresh the master package lists. This can be
               run as part of a package installation or as a separate step.
         required: false
-        default: no
+        default: yes
         choices: ["yes", "no"]
     upgrade:
         description:
@@ -69,9 +69,11 @@ import os
 import re
 import sys
 
+
 def is_installed(xbps_output):
     """Take xbps output and find if installed"""
-    return  bool(len(xbps_output))
+    return bool(len(xbps_output))
+
 
 def query_package(module, xbps_path, name, state="present"):
     """Query XBPS for Package info"""
@@ -86,8 +88,9 @@ def query_package(module, xbps_path, name, state="present"):
         rrc, rstdout, rstderr = module.run_command(rcmd, check_rc=False)
 
         if rrc == 0:
-            # Return True to indicate that the package is installed locally, and the result of the version number comparison
-            # to determine if the package is up-to-date.
+            """Return True to indicate that the package is installed locally,
+            and the result of the version number comparison to determine if the
+            package is up-to-date"""
             return True, (name in rstdout)
 
         return False, False
@@ -102,6 +105,7 @@ def update_package_db(module, xbps_path):
     else:
         module.fail_json(msg="Could not update package db")
 
+
 def upgrade(module, xbps_path):
     cmdupgrade = "%s -uy" % (xbps_path['install'])
     cmdneedupgrade = "%s -un" % (xbps_path['install'])
@@ -109,15 +113,16 @@ def upgrade(module, xbps_path):
     rc, stdout, stderr = module.run_command(cmdneedupgrade, check_rc=False)
     if rc == 0:
         if(len(stdout.splitlines()) == 0):
-           module.exit_json(changed=False, msg='Nothing to upgrade')
+            module.exit_json(changed=False, msg='Nothing to upgrade')
         else:
-           rc, stdout, stderr = module.run_command(cmdupgrade, check_rc=False)
-           if rc == 0:
-               module.exit_json(changed=True, msg='System upgraded')
-           else:
-               module.fail_json(msg="Could not upgrade")
+            rc, stdout, stderr = module.run_command(cmdupgrade, check_rc=False)
+            if rc == 0:
+                module.exit_json(changed=True, msg='System upgraded')
+            else:
+                module.fail_json(msg="Could not upgrade")
     else:
         module.fail_json(msg="Could not upgrade")
+
 
 def remove_packages(module, xbps_path, packages):
     remove_c = 0
@@ -147,9 +152,11 @@ def install_packages(module, xbps_path, state, packages):
     install_c = 0
 
     for i, package in enumerate(packages):
-        # if the package is installed and state == present or state == latest and is up-to-date then skip
+        """If the package is installed and state == present or state == latest
+        and is up-to-date then skip"""
         installed, updated = query_package(module, xbps_path, package)
-        if installed and (state == 'present' or (state == 'latest' and updated)):
+        if installed and (state == 'present' or
+                          (state == 'latest' and updated)):
             continue
 
         cmd = "%s -y %s" % (xbps_path['install'], package)
@@ -161,7 +168,8 @@ def install_packages(module, xbps_path, state, packages):
         install_c += 1
 
     if install_c > 0:
-        module.exit_json(changed=True, msg="installed %s package(s)" % (install_c))
+        module.exit_json(changed=True, msg="installed %s package(s)"
+                         % (install_c))
 
     module.exit_json(changed=False, msg="package(s) already installed")
 
@@ -185,24 +193,28 @@ def check_packages(module, xbps_path, packages, state):
 
 def main():
     module = AnsibleModule(
-        argument_spec    = dict(
-            name         = dict(aliases=['pkg', 'package'], type='list'),
-            state        = dict(default='present', choices=['present', 'installed', "latest", 'absent', 'removed']),
-            recurse      = dict(default=False, type='bool'),
-            force        = dict(default=False, type='bool'),
-            upgrade      = dict(default=False, type='bool'),
-            update_cache = dict(default=False, aliases=['update-cache'], type='bool')
+        argument_spec=dict(
+            name=dict(aliases=['pkg', 'package'], type='list'),
+            state=dict(default='present', choices=['present', 'installed',
+                                                   "latest", 'absent',
+                                                   'removed']),
+            recurse=dict(default=False, type='bool'),
+            force=dict(default=False, type='bool'),
+            upgrade=dict(default=False, type='bool'),
+            update_cache=dict(default=True, aliases=['update-cache'],
+                              type='bool')
         ),
-        required_one_of = [['name', 'update_cache', 'upgrade']],
-        supports_check_mode = True)
+        required_one_of=[['name', 'update_cache', 'upgrade']],
+        supports_check_mode=True)
 
-    xbps_path=dict()
+    xbps_path = dict()
     xbps_path['install'] = module.get_bin_path('xbps-install', True)
     xbps_path['query'] = module.get_bin_path('xbps-query', True)
     xbps_path['remove'] = module.get_bin_path('xbps-remove', True)
 
     if not os.path.exists(xbps_path['install']):
-        module.fail_json(msg="cannot find xbps, in path %s" % (xbps_install_path))
+        module.fail_json(msg="cannot find xbps, in path %s"
+                         % (xbps_install_path))
 
     p = module.params
 
@@ -215,10 +227,13 @@ def main():
     if p["update_cache"] and not module.check_mode:
         update_package_db(module, xbps_path)
         if not (p['name'] or p['upgrade']):
-            module.exit_json(changed=True, msg='Updated the package master lists')
+            module.exit_json(changed=True,
+                             msg='Updated the package master lists')
 
-    if p['update_cache'] and module.check_mode and not (p['name'] or p['upgrade']):
-        module.exit_json(changed=True, msg='Would have updated the package cache')
+    if p['update_cache'] and module.check_mode\
+       and not (p['name'] or p['upgrade']):
+        module.exit_json(changed=True,
+                         msg='Would have updated the package cache')
 
     if p['upgrade']:
         upgrade(module, xbps_path)
