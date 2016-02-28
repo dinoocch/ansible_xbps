@@ -162,7 +162,7 @@ def install_packages(module, xbps_path, state, packages):
         cmd = "%s -y %s" % (xbps_path['install'], package)
         rc, stdout, stderr = module.run_command(cmd, check_rc=False)
 
-        if rc != 0:
+        if rc != 0 and not (state == 'latest' and rc == 17):
             module.fail_json(msg="failed to install %s" % (package))
 
         install_c += 1
