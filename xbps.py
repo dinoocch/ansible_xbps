@@ -1,6 +1,24 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# Copyright 2016 Dino Occhialini <dino.occhialini@gmail.com>
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 DOCUMENTATION = '''
 ---
 module: xbps
@@ -63,6 +81,20 @@ EXAMPLES = '''
 - xbps: upgrade=yes
 '''
 
+RETURN = '''
+changed:
+    description: whether xbps was changed
+    returned: success
+    type: boolean
+    sample: True
+msg:
+    description: Message about results
+    returned: success
+    type: string
+    sample: "System Upgraded"
+'''
+
+
 import json
 import shlex
 import os
@@ -71,12 +103,12 @@ import sys
 
 
 def is_installed(xbps_output):
-    """Take xbps output and find if installed"""
+    """Returns package install state"""
     return bool(len(xbps_output))
 
 
 def query_package(module, xbps_path, name, state="present"):
-    """Query XBPS for Package info"""
+    """Returns Package info"""
     if state == "present":
         lcmd = "%s %s" % (xbps_path['query'], name)
         lrc, lstdout, lstderr = module.run_command(lcmd, check_rc=False)
@@ -97,6 +129,7 @@ def query_package(module, xbps_path, name, state="present"):
 
 
 def update_package_db(module, xbps_path):
+    """Returns True if update_package_db succeeds"""
     cmd = "%s -S" % (xbps_path['install'])
     rc, stdout, stderr = module.run_command(cmd, check_rc=False)
 
@@ -107,6 +140,7 @@ def update_package_db(module, xbps_path):
 
 
 def upgrade(module, xbps_path):
+    """Returns true is full upgrade succeeds"""
     cmdupgrade = "%s -uy" % (xbps_path['install'])
     cmdneedupgrade = "%s -un" % (xbps_path['install'])
 
@@ -125,6 +159,7 @@ def upgrade(module, xbps_path):
 
 
 def remove_packages(module, xbps_path, packages):
+    """Returns true if package removal succeeds"""
     remove_c = 0
     # Using a for loop incase of error, we can report the package that failed
     for package in packages:
@@ -149,6 +184,7 @@ def remove_packages(module, xbps_path, packages):
 
 
 def install_packages(module, xbps_path, state, packages):
+    """Returns true if package install succeeds."""
     install_c = 0
 
     for i, package in enumerate(packages):
@@ -175,6 +211,7 @@ def install_packages(module, xbps_path, state, packages):
 
 
 def check_packages(module, xbps_path, packages, state):
+    """Returns change status of command"""
     would_be_changed = []
     for package in packages:
         installed, updated = query_package(module, xbps_path, package)
@@ -192,6 +229,7 @@ def check_packages(module, xbps_path, packages, state):
 
 
 def main():
+    """Returns, calling appropriate command"""
     module = AnsibleModule(
         argument_spec=dict(
             name=dict(aliases=['pkg', 'package'], type='list'),
