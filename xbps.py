@@ -87,7 +87,7 @@ def query_package(module, xbps_path, name, state="present"):
         rcmd = "%s -Sun" % (xbps_path['install'])
         rrc, rstdout, rstderr = module.run_command(rcmd, check_rc=False)
 
-        if rrc == 0:
+        if rrc == 0 or rrc == 17:
             """Return True to indicate that the package is installed locally,
             and the result of the version number comparison to determine if the
             package is up-to-date"""
