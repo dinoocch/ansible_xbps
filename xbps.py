@@ -30,6 +30,7 @@ author:
     - "Michael Aldridge (@the-maldridge)"
 notes: []
 requirements: []
+version_added: 2.2
 options:
     name:
         description:
@@ -63,7 +64,6 @@ options:
         required: false
         default: no
         choices: ["yes", "no"]
-        version_added: "2.0"
 '''
 
 EXAMPLES = '''
@@ -95,12 +95,7 @@ msg:
 '''
 
 
-import json
-import shlex
 import os
-import re
-import sys
-
 
 def is_installed(xbps_output):
     """Returns package install state"""
@@ -118,12 +113,11 @@ def query_package(module, xbps_path, name, state="present"):
 
         rcmd = "%s -Sun" % (xbps_path['install'])
         rrc, rstdout, rstderr = module.run_command(rcmd, check_rc=False)
-
         if rrc == 0 or rrc == 17:
             """Return True to indicate that the package is installed locally,
             and the result of the version number comparison to determine if the
             package is up-to-date"""
-            return True, (name in rstdout)
+            return True, name not in rstdout
 
         return False, False
 
@@ -185,8 +179,7 @@ def remove_packages(module, xbps_path, packages):
 
 def install_packages(module, xbps_path, state, packages):
     """Returns true if package install succeeds."""
-    install_c = 0
-
+    toInstall = []
     for i, package in enumerate(packages):
         """If the package is installed and state == present or state == latest
         and is up-to-date then skip"""
@@ -195,17 +188,19 @@ def install_packages(module, xbps_path, state, packages):
                           (state == 'latest' and updated)):
             continue
 
-        cmd = "%s -y %s" % (xbps_path['install'], package)
-        rc, stdout, stderr = module.run_command(cmd, check_rc=False)
+        toInstall.append(package)
 
-        if rc != 0 and not (state == 'latest' and rc == 17):
-            module.fail_json(msg="failed to install %s" % (package))
+    if len(toInstall) == 0:
+        module.exit_json(changed=False, msg="Nothing to Install")
 
-        install_c += 1
+    cmd = "%s -y %s" % (xbps_path['install'], " ".join(toInstall))
+    rc, stdout, stderr = module.run_command(cmd, check_rc=False)
 
-    if install_c > 0:
-        module.exit_json(changed=True, msg="installed %s package(s)"
-                         % (install_c))
+    if rc != 0 and not (state == 'latest' and rc == 17):
+        module.fail_json(msg="failed to install %s" % (package))
+
+    module.exit_json(changed=True, msg="installed %s package(s)"
+                         % (len(toInstall)))
 
     module.exit_json(changed=False, msg="package(s) already installed")
 
@@ -230,6 +225,9 @@ def check_packages(module, xbps_path, packages, state):
 
 def main():
     """Returns, calling appropriate command"""
+
+    mask = os.umask(0) # fix the umask
+
     module = AnsibleModule(
         argument_spec=dict(
             name=dict(aliases=['pkg', 'package'], type='list'),
@@ -286,6 +284,8 @@ def main():
             install_packages(module, xbps_path, p['state'], pkgs)
         elif p['state'] == 'absent':
             remove_packages(module, xbps_path, pkgs)
+
+    os.umask(mask) # Reset the umask to original value
 
 # import module snippets
 from ansible.module_utils.basic import *
