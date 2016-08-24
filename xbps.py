@@ -123,14 +123,16 @@ def query_package(module, xbps_path, name, state="present"):
 
 
 def update_package_db(module, xbps_path):
-    """Returns True if update_package_db succeeds"""
+    """Returns True if update_package_db changed"""
     cmd = "%s -S" % (xbps_path['install'])
     rc, stdout, stderr = module.run_command(cmd, check_rc=False)
 
-    if rc == 0:
+    if rc != 0:
+        module.fail_json(msg="Could not update package db")
+    if "avg rate" in stdout:
         return True
     else:
-        module.fail_json(msg="Could not update package db")
+        return False
 
 
 def upgrade(module, xbps_path):
@@ -261,8 +263,8 @@ def main():
         p['state'] = 'absent'
 
     if p["update_cache"] and not module.check_mode:
-        update_package_db(module, xbps_path)
-        if not (p['name'] or p['upgrade']):
+        changed = update_package_db(module, xbps_path)
+        if not (p['name'] or p['upgrade']) and changed:
             module.exit_json(changed=True,
                              msg='Updated the package master lists')
 
