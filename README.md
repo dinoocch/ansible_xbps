@@ -7,7 +7,7 @@ Manage packages with the XBPS package manager.
 ## Options
 	name:
 		description:
-		  - Name of the package to install, upgrade, or remove.
+			- Name of the package to install, upgrade, or remove.
 		required: false
 		default: null
 	state:
@@ -16,18 +16,18 @@ Manage packages with the XBPS package manager.
 		required: false
 		default: "present"
 		choices: ["present", "absent", "latest"]
-		recurse:
-			description:
-				- When removing a package, also remove its dependencies, provided
-		  that they are not required by other packages and were not
-		  explicitly installed by a user.
+	recurse:
+		description:
+			- When removing a package, also remove its dependencies, provided
+			  that they are not required by other packages and were not
+			  explicitly installed by a user.
 		required: false
 		default: no
 		choices: ["yes", "no"]
 	update_cache:
 		description:
 			- Whether or not to refresh the master package lists. This can be
-		  run as part of a package installation or as a separate step.
+			  run as part of a package installation or as a separate step.
 		required: false
 		default: no
 		choices: ["yes", "no"]
